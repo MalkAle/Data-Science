@@ -1,0 +1,126 @@
+'''This in an excercise created using jupyter notebook'''
+
+%Importing libraries
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+
+import matplotlib.pyplot as plt
+%matplotlib inline
+sns.set_style('whitegrid')
+
+
+%Readng csv
+ad_data = pd.read_csv('advertising.csv')
+
+%Exploring data
+ad_data.head()
+ad_data.info()
+ad_data.describe()
+
+%Checking for missing data
+sns.heatmap(ad_data.isnull(),yticklabels=False,cbar=False,cmap='viridis')
+
+%Exploring Data
+%Plotting age distribution
+sns.histplot(ad_data['Age'],bins=30)
+
+%Plotting area income vs age
+sns.jointplot(data=ad_data,x='Area Income',y='Age')
+
+%Plotting dailiy time spent on site vs age
+sns.jointplot(data=ad_data,y='Daily Time Spent on Site',x='Age',kind='kde',fill=True,color='red')
+
+
+%Plotting dailiy time spent on site vs daily internet usage
+sns.jointplot(data=ad_data,y='Daily Time Spent on Site',x='Daily Internet Usage',color='green')
+
+%Plotting all colummns containing numerical data pairwise to check despendencies in regards to 'clicked on ad' column
+sns.pairplot(data=ad_data,hue='Clicked on Ad',palette='coolwarm')
+
+%Checking for columns that can be used as predictors for regression
+%Checking if ''Ad Topic Line' column contains information usable for regression
+%How many diffrent topics are there?
+ad_data.groupby(['Ad Topic Line'])['Ad Topic Line'].count()
+%>>>Every entry diffrent topic
+
+%Splitting topic strings in words to check for repeating words, 3 words is max.
+ad_data['Split [0]'] = ad_data['Ad Topic Line'].apply(lambda x:x.split()[0])
+ad_data['Split [1]'] = ad_data['Ad Topic Line'].apply(lambda x:x.split()[1])
+ad_data['Split [2]'] = ad_data['Ad Topic Line'].apply(lambda x:x.split()[2])
+
+%Plotting 3 words in subplots
+fig, axes = plt.subplots(1, 3,figsize=(15, 4))
+plt.setp(axes, xticks=[])
+sns.histplot(data=ad_data,x='Split [0]',ax=axes[0])
+sns.histplot(data=ad_data,x='Split [1]',ax=axes[1])
+sns.histplot(data=ad_data,x='Split [2]',ax=axes[2])
+axes[0].set_title('Split [0]')
+axes[1].set_title('Split [1]')
+axes[2].set_title('Split [2]')
+%>>>No pattern can be recognized, 'Ad Topic Line' column will not be used for regression
+
+%Removing split columns from ad_data
+ad_data.drop(['Split [0]','Split [1]','Split [2]'],axis=1,inplace=True)
+
+%Checking if 'City' column contains information usable for regression
+sns.histplot(data=ad_data,x='City')
+plt.xticks([])
+%>>>No pattern can be recognized, 'City' column will not be used for regression
+
+%Checking if 'Country' column contains information usable for regression
+sns.histplot(data=ad_data,x='Country')
+plt.xticks([])
+%>>>No pattern can be recognized, 'Country' column will not be used for regression
+
+
+%Checking if 'Timestamp' column contains information usable for regression
+%Converting stings to datetime type
+ad_data['Timestamp'] = pd.to_datetime(ad_data['Timestamp'])
+
+%Splitting timestamp into days, weeks and hours and adding to ad_data as columns
+ad_data['Day of Week'] = ad_data['Timestamp'].apply(lambda time: time.day_of_week)
+ad_data['Hour'] = ad_data['Timestamp'].apply(lambda time: time.hour)
+ad_data['Month'] = ad_data['Timestamp'].apply(lambda time: time.month)
+
+%Checking data head
+ad_data.head()
+
+%Checking for patterns using countplot regadring wether clicked on ad
+cp = sns.countplot(x='Hour',hue='Clicked on Ad',data=ad_data)
+cp.legend(loc='center right', bbox_to_anchor=(1.25, 0.9), ncol=1)
+cp = sns.countplot(x='Month',hue='Clicked on Ad',data=ad_data)
+cp.legend(loc='center right', bbox_to_anchor=(1.25, 0.9), ncol=1)
+cp = sns.countplot(x='Day of Week',hue='Clicked on Ad',data=ad_data)
+cp.legend(loc='center right', bbox_to_anchor=(1.25, 0.9), ncol=1)
+ad_data['Month'].max()
+%>>>No patters can be found, only 7 months available. No useful patterns for predictions found
+
+%Removing all columns found not useful for regression
+ad_data.drop(['Timestamp','Day of Week','Hour','Month','Ad Topic Line','City','Country'],axis=1,inplace=True)
+
+%Regression
+%Importing sklearn and Logistic Reression
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+
+%Splitting data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(ad_data.drop('Clicked on Ad',axis=1), 
+                                                    ad_data['Clicked on Ad'], test_size=0.30, 
+                                                    random_state=101)
+
+%Fitting data
+logmodel = LogisticRegression()
+logmodel.fit(X_train,y_train)
+
+%Prediction
+predictions = logmodel.predict(X_test)
+
+%Checking quality of model
+%Importing classification report
+from sklearn.metrics import classification_report
+
+%Printing results
+print(classification_report(y_test,predictions))
+%>>>Values around 90% which can be considered as 'good' generally speaking
