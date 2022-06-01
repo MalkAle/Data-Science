@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 sns.set_style('whitegrid')
 
 
-%Readng csv
+%Readng csv found on Kaggle: https://www.kaggle.com/datasets/bumba5341/advertisingcsv?resource=download&select=Advertising.csv
 ad_data = pd.read_csv('advertising.csv')
 
 %Exploring data
